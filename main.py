@@ -7,8 +7,8 @@ from TTS.api import TTS
 import sounddevice as sd
 import numpy as np
 import asyncpg
-import asyncio
 from urllib.parse import urlparse
+import tempfile
 
 app = FastAPI()
 
@@ -18,14 +18,17 @@ logger = logging.getLogger(__name__)
 async def get_db_connection():
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
+        logger.error("Database URL not found in environment variables.")
         raise HTTPException(status_code=500, detail="Database URL not found in environment variables.")
+    
     parsed_url = urlparse(database_url)
-    user = parsed_url.username
-    password = parsed_url.password
-    host = parsed_url.hostname
-    port = parsed_url.port
-    database = parsed_url.path[1:]
-    conn = await asyncpg.connect(user=user, password=password, database=database, host=host, port=port)
+    conn = await asyncpg.connect(
+        user=parsed_url.username,
+        password=parsed_url.password,
+        database=parsed_url.path[1:], 
+        host=parsed_url.hostname,
+        port=parsed_url.port
+    )
     return conn
 
 class VoiceEngine:
@@ -47,8 +50,10 @@ class VoiceEngine:
         return self.recognizer.PartialResult()
 
     def speak(self, text):
-        self.tts.tts_to_file(text=text, file_path="response.wav")
-        return "response.wav"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
+            temp_file_path = temp_file.name
+        self.tts.tts_to_file(text=text, file_path=temp_file_path)
+        return temp_file_path
 
 @app.post("/register_face")
 async def register_face(file: UploadFile = File(...)):
