@@ -6,7 +6,6 @@ import sqlite3
 import sounddevice as sd
 import numpy as np
 import os
-import praw  # For Reddit integration
 
 app = FastAPI()
 
@@ -69,24 +68,6 @@ async def ask(question: str):
     llm = Llama(model_path="mistral-7b-instruct-v0.1.Q4_K_M.gguf")
     response = llm(question, max_tokens=100)
     return {"answer": response["choices"][0]["text"]}
-
-# --- Reddit Integration ---
-reddit = praw.Reddit(
-    client_id="YOUR_CLIENT_ID",
-    client_secret="YOUR_CLIENT_SECRET",
-    user_agent="YOUR_USER_AGENT"
-)
-
-@app.get("/reddit/{subreddit}")
-async def get_subreddit_posts(subreddit: str, limit: int = 5):
-    posts = []
-    for submission in reddit.subreddit(subreddit).hot(limit=limit):
-        posts.append({
-            "title": submission.title,
-            "score": submission.score,
-            "url": submission.url
-        })
-    return {"subreddit": subreddit, "posts": posts}
 
 # --- Main Loop ---
 if __name__ == "__main__":
