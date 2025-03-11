@@ -6,4 +6,3 @@ llama-cpp-python
 coqui-tts
 sounddevice
 numpy
-sqlite3
